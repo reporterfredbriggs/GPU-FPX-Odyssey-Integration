@@ -1,47 +1,33 @@
-# .PHONY: NVBIT GPU-FPX 
+#NVCC=nvcc --generate-line-info
+#NVCC=/usr/local/cuda-11.0/bin/nvcc --generate-line-info
+# include ../../../../utility/config.mk
 
-all:analyzer detector
+all: ex
 
-nvbit_tar=nvbit-Linux-x86_64-1.5.5.tar.bz2
-nvbit_tool=$(shell pwd)/nvbit_release/tools
-GPUFPX_home=$(nvbit_tool)/GPU-FPX
+ex:
+	nvcc --generate-line-info ex.cu -o ex
 
-analyzer: $(GPUFPX_home)/analyzer/analyzer.so
-detector: $(GPUFPX_home)/detector/detector.so
+exf:
+	nvcc --generate-line-info --use_fast_math ex.cu -o exf
 
-$(GPUFPX_home)/analyzer/analyzer.so: $(GPUFPX_home)/analyzer/analyzer.cu
-	cd $(GPUFPX_home)/analyzer; \
-	$(MAKE)
+run:ex
+	./ex
 
-$(GPUFPX_home)/analyzer/analyzer.cu: $(GPUFPX_home) $(GPUFPX_home)/utility/common.h
-	cp -r $(nvbit_tool)/record_reg_vals/*.cu $</analyzer
-	cp -r $(nvbit_tool)/record_reg_vals/Makefile $</analyzer
-	cd $(GPUFPX_home)/analyzer && patch <analyzer.patch && patch <Makefile.patch && patch <inject_funcs.patch
-	mv $(GPUFPX_home)/analyzer/record_reg_vals.cu $(GPUFPX_home)/analyzer/analyzer.cu
+runf:exf
+	./exf
 
-$(GPUFPX_home)/detector/detector.so: $(GPUFPX_home)/detector/detector.cu
-	cd $(GPUFPX_home)/detector; \
-	$(MAKE)
+detect:ex
+	LD_PRELOAD=../nvbit_release/tools/GPU-FPX/detector/detector.so ./ex
 
-$(GPUFPX_home)/detector/detector.cu: $(GPUFPX_home) $(GPUFPX_home)/utility/common.h
-	cp -r $(nvbit_tool)/record_reg_vals/*.cu $</detector
-	cp -r $(nvbit_tool)/record_reg_vals/Makefile $</detector
-	cd $(GPUFPX_home)/detector && patch <detector.patch && patch <Makefile.patch && patch <inject_funcs.patch
-	mv $(GPUFPX_home)/detector/record_reg_vals.cu $(GPUFPX_home)/detector/detector.cu
+detectf:exf
+	LD_PRELOAD=../nvbit_release/tools/GPU-FPX/detector/detector.so ./exf
 
-$(GPUFPX_home)/utility/common.h:$(GPUFPX_home)
-	cp $(nvbit_tool)/record_reg_vals/common.h $</utility
-	cd $(GPUFPX_home)/utility && patch <common.patch
+analyze:ex
+	LD_PRELOAD=../nvbit_release/tools/GPU-FPX/analyzer//analyzer.so ./ex
 
-$(GPUFPX_home): nvbit_release
-	cp -r GPU-FPX $(nvbit_tool)/
-
-nvbit_release: $(nvbit_tar)
-	tar -xf $<
-
-$(nvbit_tar):
-	wget https://github.com/NVlabs/NVBit/releases/download/1.5.5/$@
+analyzef:exf
+	LD_PRELOAD=../nvbit_release/tools/GPU-FPX/analyzer//analyzer.so ./exf
 
 clean:
-	rm -rf nvbit_release/
-	rm nvbit-Linux-x86_64-1.5.5.tar.bz2
+	rm -rf ex exf
+
